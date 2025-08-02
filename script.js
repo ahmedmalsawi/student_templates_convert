@@ -25,28 +25,20 @@ document.getElementById('excelFile').addEventListener('change', function (e) {
 document.getElementById('convertBtn').addEventListener('click', function () {
   if (!workbookData) return;
 
-  let studentName = "";
-  let date = "";
-  let subject = "";
-  let goal = "";
+  // ✅ البيانات الأساسية من المواقع الثابتة
+  let studentName = workbookData[4]?.[1] || ""; // B5
+  let subject = workbookData[6]?.[1] || "";     // B7
+  let goal = workbookData[8]?.[1] || "";        // B9
 
-  // ✅ التعرف على البيانات الأساسية
+  // ✅ التاريخ (Regex)
+  let date = "";
   workbookData.forEach(row => {
-    row.forEach((cell, index) => {
-      if (typeof cell === "string" && cell.includes("الطالب")) {
-        studentName = row[index + 1] || cell.replace("الطالب:", "").trim();
-      }
+    row.forEach(cell => {
       if (/^\d{2}\/\d{2}\/\d{4}$/.test(cell)) {
         date = cell;
       }
-      if (typeof cell === "string" && cell.trim() === "المادة") {
-        subject = row[index - 1] || "";
-      }
     });
   });
-
-  // ✅ الهدف من B9 مباشرة (index الصف = 8، العمود = 1)
-  goal = workbookData[8]?.[1] || "";
 
   // ✅ البنود تبدأ من الصف 13
   let startIndex = 12;
@@ -57,16 +49,13 @@ document.getElementById('convertBtn').addEventListener('click', function () {
     let row = workbookData[i];
 
     let evaluationItem = row[0] || ""; // العمود A
-
-    // ✅ درجة التقييم: E (index 4) أو F (index 5)
-    let grade = row[4] || row[5] || "";
-
-    // ✅ ملاحظات التقييم: G (index 6) أو H (index 7)
-    let notes = row[6] || row[7] || "";
+    let grade = row[4] || row[5] || ""; // الدرجة E أو F
+    let notes = row[6] || row[7] || ""; // الملاحظات G أو H
 
     // وقف عند أول صف فاضي تمامًا
     if (!evaluationItem && !grade && !notes) break;
 
+    // أضف الصف
     convertedData.push([
       i === startIndex ? studentName : "",
       i === startIndex ? date : "",
@@ -76,13 +65,18 @@ document.getElementById('convertBtn').addEventListener('click', function () {
       grade,
       notes
     ]);
+
+    // ✅ إذا البند يحتوي على "ملخص" توقف فورًا
+    if (String(evaluationItem).trim().includes("ملخص")) {
+      break;
+    }
   }
 
   // ✅ عرض النتيجة
   renderTable(convertedData);
 
   document.getElementById('downloadBtn').disabled = false;
-  alert("✅ Conversion done! Goal always taken from B9.");
+  alert("✅ Conversion done! Stops after 'ملخص'.");
 });
 
 document.getElementById('downloadBtn').addEventListener('click', function () {
@@ -119,6 +113,7 @@ function renderTable(data) {
     });
   }
 }
+
 
 
 
