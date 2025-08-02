@@ -3,8 +3,10 @@ let allConvertedData = [["الطالب", "التاريخ", "المادة", "ال
 function showToast(message, type = 'primary') {
   const toastEl = document.getElementById('statusToast');
   const toastBody = document.getElementById('statusToastBody');
+  
   toastEl.className = `toast align-items-center text-bg-${type} border-0`;
   toastBody.textContent = message;
+  
   const toast = new bootstrap.Toast(toastEl);
   toast.show();
 }
@@ -19,6 +21,22 @@ document.getElementById('excelFile').addEventListener('change', function (e) {
   showToast(`📂 جاري قراءة ${files.length} ملف...`, "info");
   document.getElementById('convertBtn').disabled = false;
 });
+// مثال الاستخدام أثناء المعالجة
+// document.getElementById('convertBtn').addEventListener('click', function () {
+//   showToast("📂 جاري قراءة الملف...", "info");
+
+//   setTimeout(() => {
+//     showToast("✅ تم استخراج البيانات الأساسية", "success");
+    
+//     setTimeout(() => {
+//       showToast("✅ تم استخراج بنود التقييم", "success");
+      
+//       setTimeout(() => {
+//         showToast("🎉 المعالجة تمت بنجاح!", "success");
+//       }, 1500);
+//     }, 1500);
+//   }, 1000);
+// });
 
 document.getElementById('convertBtn').addEventListener('click', async function () {
   const files = Array.from(document.getElementById('excelFile').files);
