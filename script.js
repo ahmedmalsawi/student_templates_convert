@@ -27,7 +27,7 @@ document.getElementById('convertBtn').addEventListener('click', async function (
     return;
   }
 
-  allConvertedData = [["الطالب", "التاريخ", "المادة", "الهدف", "بنود التقييم/التقييم", "بنود التقييم/درجة التقييم", "بنود التقييم/ملاحظات التقييم"]];
+  allConvertedData = [["التقييم", "الطالب", "التاريخ", "المادة", "الهدف", "بنود التقييم/التقييم", "بنود التقييم/درجة التقييم", "بنود التقييم/ملاحظات التقييم"]];
   
   for (let index = 0; index < files.length; index++) {
     const file = files[index];
@@ -74,12 +74,38 @@ function processWorkbook(workbook) {
   const sheet = workbook.Sheets[sheetName];
   const workbookData = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
 
-  // ✅ البيانات الأساسية من المواقع الثابتة
-  let studentName = workbookData[4]?.[1] || ""; // B5
-  let subject = workbookData[6]?.[1] || "";     // B7
-  let goal = workbookData[8]?.[1] || "";        // B9
+  let studentName = "";
+  let subject = "";
+  let goal = "";
 
-  // ✅ التاريخ (Regex)
+  // ✅ البحث عن الطالب في الصف 5
+  if (workbookData[4]) {
+    workbookData[4].forEach((cell, idx) => {
+      if (typeof cell === "string" && cell.includes("الطالب")) {
+        studentName = workbookData[4][idx + 1] || "";
+      }
+    });
+  }
+
+  // ✅ البحث عن المادة في الصف 7 (نأخذ الخلية اللي قبلها)
+  if (workbookData[6]) {
+    workbookData[6].forEach((cell, idx) => {
+      if (typeof cell === "string" && cell.includes("المادة")) {
+        subject = workbookData[6][idx - 1] || "";
+      }
+    });
+  }
+
+  // ✅ البحث عن الهدف في الصف 9
+  if (workbookData[8]) {
+    workbookData[8].forEach((cell, idx) => {
+      if (typeof cell === "string" && cell.includes("هدف")) {
+        goal = workbookData[8][idx + 1] || "";
+      }
+    });
+  }
+
+  // ✅ البحث عن التاريخ (في أي مكان)
   let date = "";
   workbookData.forEach(row => {
     row.forEach(cell => {
@@ -95,15 +121,15 @@ function processWorkbook(workbook) {
 
   for (let i = startIndex; i < workbookData.length; i++) {
     let row = workbookData[i];
-
-    let evaluationItem = row[0] || ""; // العمود A
-    let grade = row[4] || row[5] || ""; // الدرجة E أو F
-    let notes = row[6] || row[7] || ""; // الملاحظات G أو H
+    let evaluationItem = row[0] || "";
+    let grade = row[4] || row[5] || "";
+    let notes = row[6] || row[7] || "";
 
     if (!evaluationItem && !grade && !notes) break;
 
     allConvertedData.push([
-      firstRowForThisFile ? studentName : "",
+      firstRowForThisFile ? studentName : "", // التقييم (اسم الطالب)
+      firstRowForThisFile ? studentName : "", // الطالب
       firstRowForThisFile ? date : "",
       firstRowForThisFile ? subject : "",
       firstRowForThisFile ? goal : "",
@@ -114,12 +140,13 @@ function processWorkbook(workbook) {
 
     if (String(evaluationItem).trim().includes("ملخص")) break;
 
-    firstRowForThisFile = false; // بعد أول صف، الأعمدة الأربعة تبقى فاضية
+    firstRowForThisFile = false;
   }
 
-  // 🔹 إضافة صف فاصل (اختياري للوضوح في الاكسيل النهائي)
-  allConvertedData.push(["", "", "", "", "", "", ""]);
+  // 🔹 صف فاصل
+  allConvertedData.push(["", "", "", "", "", "", "", ""]);
 }
+
 
 
 function renderTable(data) {
