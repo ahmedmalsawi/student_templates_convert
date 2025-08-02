@@ -20,4 +20,23 @@ body {
     opacity: 0.5;
     cursor: not-allowed;
   }
+  body {
+  background-color: #f9f9f9;
+}
+h2 {
+  color: #333;
+}
+table {
+  background-color: white;
+}
+  table th, table td {
+    text-align: center;
+    vertical-align: middle;
+  }
+  
+  button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  
   

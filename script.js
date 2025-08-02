@@ -1,9 +1,23 @@
 let workbookData = null;
 let convertedData = null;
 
+function showToast(message, type = 'primary') {
+  const toastEl = document.getElementById('statusToast');
+  const toastBody = document.getElementById('statusToastBody');
+  toastEl.className = `toast align-items-center text-bg-${type} border-0`;
+  toastBody.textContent = message;
+  const toast = new bootstrap.Toast(toastEl);
+  toast.show();
+}
+
 document.getElementById('excelFile').addEventListener('change', function (e) {
   const file = e.target.files[0];
-  if (!file) return;
+  if (!file) {
+    showToast("❌ لم يتم اختيار أي ملف", "danger");
+    return;
+  }
+
+  showToast("📂 جاري قراءة الملف...", "info");
 
   const reader = new FileReader();
   reader.onload = function (event) {
@@ -18,73 +32,83 @@ document.getElementById('excelFile').addEventListener('change', function (e) {
     document.getElementById('convertBtn').disabled = false;
 
     renderTable(jsonData); // عرض الملف الأصلي
+
+    showToast("✅ الملف جاهز للتحويل", "success");
   };
   reader.readAsArrayBuffer(file);
 });
 
 document.getElementById('convertBtn').addEventListener('click', function () {
-  if (!workbookData) return;
-
-  // ✅ البيانات الأساسية من المواقع الثابتة
-  let studentName = workbookData[4]?.[1] || ""; // B5
-  let subject = workbookData[6]?.[1] || "";     // B7
-  let goal = workbookData[8]?.[1] || "";        // B9
-
-  // ✅ التاريخ (Regex)
-  let date = "";
-  workbookData.forEach(row => {
-    row.forEach(cell => {
-      if (/^\d{2}\/\d{2}\/\d{4}$/.test(cell)) {
-        date = cell;
-      }
-    });
-  });
-
-  // ✅ البنود تبدأ من الصف 13
-  let startIndex = 12;
-
-  convertedData = [["الطالب", "التاريخ", "المادة", "الهدف", "بنود التقييم/التقييم", "بنود التقييم/درجة التقييم", "بنود التقييم/ملاحظات التقييم"]];
-
-  for (let i = startIndex; i < workbookData.length; i++) {
-    let row = workbookData[i];
-
-    let evaluationItem = row[0] || ""; // العمود A
-    let grade = row[4] || row[5] || ""; // الدرجة E أو F
-    let notes = row[6] || row[7] || ""; // الملاحظات G أو H
-
-    // وقف عند أول صف فاضي تمامًا
-    if (!evaluationItem && !grade && !notes) break;
-
-    // أضف الصف
-    convertedData.push([
-      i === startIndex ? studentName : "",
-      i === startIndex ? date : "",
-      i === startIndex ? subject : "",
-      i === startIndex ? goal : "",
-      evaluationItem,
-      grade,
-      notes
-    ]);
-
-    // ✅ إذا البند يحتوي على "ملخص" توقف فورًا
-    if (String(evaluationItem).trim().includes("ملخص")) {
-      break;
-    }
+  if (!workbookData) {
+    showToast("❌ من فضلك اختر ملف أولاً", "danger");
+    return;
   }
 
-  // ✅ عرض النتيجة
-  renderTable(convertedData);
+  try {
+    showToast("⏳ جاري التحويل...", "info");
 
-  document.getElementById('downloadBtn').disabled = false;
-  alert("✅ Conversion done! Stops after 'ملخص'.");
+    // ✅ البيانات الأساسية من المواقع الثابتة
+    let studentName = workbookData[4]?.[1] || ""; // B5
+    let subject = workbookData[6]?.[1] || "";     // B7
+    let goal = workbookData[8]?.[1] || "";        // B9
+
+    // ✅ التاريخ (Regex)
+    let date = "";
+    workbookData.forEach(row => {
+      row.forEach(cell => {
+        if (/^\d{2}\/\d{2}\/\d{4}$/.test(cell)) {
+          date = cell;
+        }
+      });
+    });
+
+    // ✅ البنود تبدأ من الصف 13
+    let startIndex = 12;
+
+    convertedData = [["الطالب", "التاريخ", "المادة", "الهدف", "بنود التقييم/التقييم", "بنود التقييم/درجة التقييم", "بنود التقييم/ملاحظات التقييم"]];
+
+    for (let i = startIndex; i < workbookData.length; i++) {
+      let row = workbookData[i];
+
+      let evaluationItem = row[0] || ""; // العمود A
+      let grade = row[4] || row[5] || ""; // الدرجة E أو F
+      let notes = row[6] || row[7] || ""; // الملاحظات G أو H
+
+      if (!evaluationItem && !grade && !notes) break;
+
+      convertedData.push([
+        i === startIndex ? studentName : "",
+        i === startIndex ? date : "",
+        i === startIndex ? subject : "",
+        i === startIndex ? goal : "",
+        evaluationItem,
+        grade,
+        notes
+      ]);
+
+      if (String(evaluationItem).trim().includes("ملخص")) break;
+    }
+
+    renderTable(convertedData);
+    document.getElementById('downloadBtn').disabled = false;
+    showToast("✅ التحويل تم بنجاح", "success");
+
+  } catch (error) {
+    console.error(error);
+    showToast("❌ حصل خطأ أثناء التحويل", "danger");
+  }
 });
 
 document.getElementById('downloadBtn').addEventListener('click', function () {
-  if (!convertedData) return;
+  if (!convertedData) {
+    showToast("❌ لا يوجد بيانات للتحميل", "danger");
+    return;
+  }
   const ws = XLSX.utils.aoa_to_sheet(convertedData);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Converted Report");
   XLSX.writeFile(wb, "Converted_Report.xlsx");
+  showToast("💾 تم تحميل الملف", "success");
 });
 
 function renderTable(data) {
